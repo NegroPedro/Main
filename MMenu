@@ -18,7 +18,7 @@ if not game:IsLoaded() then
     notLoaded:Destroy()
 end
 
--- GUI Parent Setup
+-- Helper for Random String
 local function randomString()
     local length = math.random(10, 20)
     local array = {}
@@ -28,7 +28,8 @@ local function randomString()
     return table.concat(array)
 end
 
-PARENT = nil
+-- Create GUI Parent
+local PARENT = nil
 if get_hidden_gui or gethui then
     local hiddenUI = get_hidden_gui or gethui
     local Main = Instance.new("ScreenGui")
@@ -59,6 +60,64 @@ Holder.Position = UDim2.new(0.5, -125, 0.5, -110) -- Center the menu
 Holder.Size = UDim2.new(0, 250, 0, 220)
 Holder.ZIndex = 10
 
+-- Add Dragging Functionality
+local dragging = false
+local dragInput, mousePos, framePos
+
+Holder.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragInput = input
+        mousePos = input.Position
+        framePos = Holder.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Holder.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+        local delta = input.Position - mousePos
+        Holder.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Add Resizing Functionality
+local ResizeHandle = Instance.new("Frame")
+ResizeHandle.Name = "ResizeHandle"
+ResizeHandle.Parent = Holder
+ResizeHandle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+ResizeHandle.Size = UDim2.new(0, 10, 0, 10)
+ResizeHandle.Position = UDim2.new(1, -10, 1, -10) -- Position at bottom right corner
+
+local resizing = false
+
+ResizeHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        resizing = true
+        dragInput = input
+        local initialSize = Holder.Size
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                resizing = false
+            end
+        end)
+    end
+end)
+
+ResizeHandle.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and resizing then
+        local newSize = UDim2.new(initialSize.X.Scale, input.Position.X - Holder.AbsolutePosition.X, initialSize.Y.Scale, input.Position.Y - Holder.AbsolutePosition.Y)
+        Holder.Size = newSize
+    end
+end)
+
+-- Title Label
 local Title = Instance.new("TextLabel")
 Title.Name = "Title"
 Title.Parent = Holder
@@ -71,6 +130,7 @@ Title.Text = "Main Menu"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.ZIndex = 10
 
+-- Command Bar Setup
 local Cmdbar = Instance.new("TextBox")
 Cmdbar.Name = "Cmdbar"
 Cmdbar.Parent = Holder
@@ -86,6 +146,7 @@ Cmdbar.Text = ""
 Cmdbar.PlaceholderText = "Enter Command Here"
 Cmdbar.ZIndex = 10
 
+-- Command List Frame Setup
 local CMDsF = Instance.new("ScrollingFrame")
 CMDsF.Name = "CMDsFrame"
 CMDsF.Parent = Holder
@@ -126,207 +187,5 @@ Cmdbar.FocusLost:Connect(function(enterPressed)
     if enterPressed and Cmdbar.Text ~= "" then
         print("Executing command:", Cmdbar.Text)
         Cmdbar.Text = ""
-    end
-end)
-
--- Initialize Services
-if IY_LOADED and not _G.IY_DEBUG then
-    return
-end
-
-pcall(function() getgenv().IY_LOADED = true end)
-
-local cloneref = cloneref or function(o) return o end
-COREGUI = cloneref(game:GetService("CoreGui"))
-Players = cloneref(game:GetService("Players"))
-
--- Wait for Game to Load
-if not game:IsLoaded() then
-    local notLoaded = Instance.new("Message")
-    notLoaded.Parent = COREGUI
-    notLoaded.Text = "Infinite Yield is waiting for the game to load..."
-    game.Loaded:Wait()
-    notLoaded:Destroy()
-end
-
--- GUI Parent Setup
-local function randomString()
-    local length = math.random(10, 20)
-    local array = {}
-    for i = 1, length do
-        array[i] = string.char(math.random(32, 126))
-    end
-    return table.concat(array)
-end
-
-PARENT = nil
-if get_hidden_gui or gethui then
-    local hiddenUI = get_hidden_gui or gethui
-    local Main = Instance.new("ScreenGui")
-    Main.Name = randomString()
-    Main.Parent = hiddenUI()
-    PARENT = Main
-elseif syn and syn.protect_gui then
-    local Main = Instance.new("ScreenGui")
-    Main.Name = randomString()
-    syn.protect_gui(Main)
-    Main.Parent = COREGUI
-    PARENT = Main
-else
-    local Main = Instance.new("ScreenGui")
-    Main.Name = randomString()
-    Main.Parent = COREGUI -- Fallback
-    PARENT = Main
-end
-
--- Main Menu GUI
-local Holder = Instance.new("Frame")
-Holder.Name = "MainMenu"
-Holder.Parent = PARENT
-Holder.Active = true
-Holder.BackgroundColor3 = Color3.fromRGB(46, 46, 47)
-Holder.BorderSizePixel = 0
-Holder.Position = UDim2.new(0.5, -125, 0.5, -110) -- Center the menu
-Holder.Size = UDim2.new(0, 250, 0, 220)
-Holder.AnchorPoint = Vector2.new(0.5, 0.5) -- Anchor to center
-Holder.ZIndex = 100
-
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Parent = Holder
-Title.BackgroundColor3 = Color3.fromRGB(36, 36, 37)
-Title.BorderSizePixel = 0
-Title.Size = UDim2.new(1, 0, 0, 20)
-Title.Font = Enum.Font.SourceSans
-Title.TextSize = 18
-Title.Text = "Main Menu"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.ZIndex = 101
-
-local Cmdbar = Instance.new("TextBox")
-Cmdbar.Name = "Cmdbar"
-Cmdbar.Parent = Holder
-Cmdbar.BackgroundTransparency = 0.1
-Cmdbar.BorderSizePixel = 0
-Cmdbar.Position = UDim2.new(0, 5, 0, 25)
-Cmdbar.Size = UDim2.new(1, -10, 0, 25)
-Cmdbar.Font = Enum.Font.SourceSans
-Cmdbar.TextSize = 18
-Cmdbar.TextXAlignment = Enum.TextXAlignment.Left
-Cmdbar.TextColor3 = Color3.new(1, 1, 1)
-Cmdbar.Text = ""
-Cmdbar.PlaceholderText = "Enter Command Here"
-Cmdbar.ZIndex = 102
-
-local CMDsF = Instance.new("ScrollingFrame")
-CMDsF.Name = "CMDsFrame"
-CMDsF.Parent = Holder
-CMDsF.BackgroundTransparency = 0.1
-CMDsF.BorderSizePixel = 0
-CMDsF.Position = UDim2.new(0, 5, 0, 55)
-CMDsF.Size = UDim2.new(1, -10, 1, -60)
-CMDsF.ScrollBarImageColor3 = Color3.fromRGB(78, 78, 79)
-CMDsF.CanvasSize = UDim2.new(0, 0, 0, 0)
-CMDsF.ScrollBarThickness = 8
-CMDsF.ZIndex = 103
-
-local cmdListLayout = Instance.new("UIListLayout")
-cmdListLayout.Parent = CMDsF
-
--- Add Commands to the List
-local function addCommand(name)
-    local command = Instance.new("TextLabel")
-    command.Name = name
-    command.Parent = CMDsF
-    command.Size = UDim2.new(1, 0, 0, 20)
-    command.BackgroundTransparency = 1
-    command.Font = Enum.Font.SourceSans
-    command.TextSize = 16
-    command.TextColor3 = Color3.new(1, 1, 1)
-    command.TextXAlignment = Enum.TextXAlignment.Left
-    command.Text = name
-    CMDsF.CanvasSize = UDim2.new(0, 0, 0, CMDsF.CanvasSize.Y.Offset + 25)
-end
-
--- Example Commands
-addCommand("help - Show all commands")
-addCommand("tp <x> <y> <z> - Teleport to coordinates")
-addCommand("speed <value> - Set player speed")
-
--- Command Execution (Placeholder)
-Cmdbar.FocusLost:Connect(function(enterPressed)
-    if enterPressed and Cmdbar.Text ~= "" then
-        print("Executing command:", Cmdbar.Text)
-        Cmdbar.Text = ""
-    end
-end)
-
--- Draggable Functionality
-local dragging = false
-local dragInput, dragStart, startPos
-
-Holder.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = Holder.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-Holder.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        Holder.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
--- Resizable Functionality
-local resizeHandle = Instance.new("Frame")
-resizeHandle.Name = "ResizeHandle"
-resizeHandle.Parent = Holder
-resizeHandle.Size = UDim2.new(0, 20, 0, 20)
-resizeHandle.Position = UDim2.new(1, -20, 1, -20)
-resizeHandle.BackgroundColor3 = Color3.fromRGB(78, 78, 79)
-resizeHandle.ZIndex = 104
-resizeHandle.Active = true
-
-resizeHandle.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = Holder.Size
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        Holder.Size = UDim2.new(
-            0,
-            math.max(200, startPos.X.Offset + delta.X),
-            0,
-            math.max(150, startPos.Y.Offset + delta.Y)
-        )
     end
 end)
