@@ -183,9 +183,12 @@ addCommand("tp <x> <y> <z> - Teleport to coordinates")
 addCommand("speed <value> - Set player speed")
 addCommand("esp - Toggle ESP for other players") -- Add the ESP Command
 addCommand("unesp - Turn off ESP for players") -- Add the unesp Command
+addCommand("betteresp - Enable better ESP") -- Add the betteresp Command
+addCommand("unbetteresp - Disable better ESP") -- Add the unbetteresp Command
 
 -- Function to enable/disable ESP
 local espEnabled = false
+local betterEspEnabled = false
 
 local function applyESPToCharacter(character)
     for _, part in pairs(character:GetChildren()) do
@@ -220,7 +223,6 @@ local function toggleESP()
                 player.CharacterAdded:Connect(function(character)
                     applyESPToCharacter(character)
                 end)
-
             else
                 -- Disable ESP Effect by resetting color and transparency for existing character
                 if player.Character then
@@ -236,15 +238,84 @@ local function toggleESP()
     end
 end
 
+-- Better ESP Feature Implementation
+local function applyBetterESPToCharacter(character)
+    local torsoGlow = Instance.new("Highlight")
+    torsoGlow.FillColor = Color3.new(1, 1, 1) -- White glow color
+    torsoGlow.FillTransparency = 0 -- Fully visible glow
+
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    torsoGlow.Parent = humanoidRootPart
+
+    character:WaitForChild("Humanoid").Died:Connect(function()
+        torsoGlow:Destroy() -- Remove glow on death
+    end)
+
+    return torsoGlow -- Return the glow object for later reference if needed.
+end
+
+local function toggleBetterESP()
+    betterEspEnabled = not betterEspEnabled -- Toggle better ESP state
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer then -- Exclude the local player
+            if betterEspEnabled then
+                -- Apply better ESP to already existing characters
+                if player.Character then
+                    applyBetterESPToCharacter(player.Character)
+                end
+
+                -- Create better ESP effect for newly added characters
+                player.CharacterAdded:Connect(function(character)
+                    applyBetterESPToCharacter(character)
+                end)
+            else
+                -- Disable better ESP Effect by removing highlights for existing character
+                if player.Character then
+                    local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
+                    if humanoidRootPart then
+                        local highlight = humanoidRootPart:FindFirstChildOfClass("Highlight")
+                        if highlight then highlight:Destroy() end -- Remove highlight effect
+                    end
+                end
+            end
+        end
+    end
+
+    -- Distance Measurement Implementation for Better ESP
+    if betterEspEnabled then
+        while betterEspEnabled do -- Loop while better ESP is enabled
+            wait(2) -- Update every 2 seconds
+
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local distance = (Players.LocalPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).magnitude
+
+                    print(string.format("%s is %.1f studs away", player.Name, distance)) -- Output distance in console
+
+                    -- Display distance text above the player's head if needed.
+                    -- Additional implementation for distance display can be added here.
+                end
+            end
+        end
+    end
+end
+
 -- Command Execution (Placeholder)
 Cmdbar.FocusLost:Connect(function(enterPressed)
     if enterPressed and Cmdbar.Text ~= "" then
         print("Executing command:", Cmdbar.Text)
-        if Cmdbar.Text:lower() == "esp" then -- Check for `esp` command
-            toggleESP() -- Call the toggle function
-        elseif Cmdbar.Text:lower() == "unesp" then -- Check for `unesp` command
+        if Cmdbar.Text:lower() == "esp" then -- Check for esp command
+            toggleESP() -- Call the toggle function for ESP
+        elseif Cmdbar.Text:lower() == "unesp" then -- Check for unesp command
             if espEnabled then
                 toggleESP() -- Call the toggle function to turn off ESP
+            end
+        elseif Cmdbar.Text:lower() == "betteresp" then -- Check for betteresp command
+            toggleBetterESP() -- Call the toggle function for better ESP
+        elseif Cmdbar.Text:lower() == "unbetteresp" then -- Check for unbetteresp command
+            if betterEspEnabled then
+                toggleBetterESP() -- Call the toggle function to turn off better ESP
             end
         end
         Cmdbar.Text = ""
@@ -258,18 +329,27 @@ Players.PlayerAdded:Connect(function(player)
             -- Add ESP to this player when they join while ESP is enabled
             applyESPToCharacter(character)
         end
+        if betterEspEnabled then
+            applyBetterESPToCharacter(character) -- Apply better ESP if enabled.
+        end
     end)
 end)
 
 -- Optional cleanup when player leaves (not necessary if done in toggleESP)
 Players.PlayerRemoving:Connect(function(player)
-    if espEnabled then
+    if espEnabled or betterEspEnabled then
         if player.Character then
             for _, part in pairs(player.Character:GetChildren()) do
                 if part:IsA("MeshPart") or part:IsA("Part") then
                     part.BrickColor = BrickColor.new("Medium stone grey") -- Reset to default color
                     part.Transparency = 0 -- Reset transparency
                 end
+            end
+
+            local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart then
+                local highlight = humanoidRootPart:FindFirstChildOfClass("Highlight")
+                if highlight then highlight:Destroy() end -- Remove highlight effect
             end
         end
     end
