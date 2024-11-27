@@ -182,9 +182,28 @@ addCommand("help - Show all commands")
 addCommand("tp <x> <y> <z> - Teleport to coordinates")
 addCommand("speed <value> - Set player speed")
 addCommand("esp - Toggle ESP for other players") -- Add the ESP Command
+addCommand("unesp - Turn off ESP for players") -- Add the unesp Command
 
 -- Function to enable/disable ESP
 local espEnabled = false
+
+local function applyESPToCharacter(character)
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("MeshPart") or part:IsA("Part") then
+            part.BrickColor = BrickColor.White() -- Change color to white for visibility
+            part.Transparency = 0.5 -- Make parts semi-transparent (visible through walls)
+        end
+    end
+
+    character:WaitForChild("Humanoid").Died:Connect(function()
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("MeshPart") or part:IsA("Part") then
+                part.BrickColor = BrickColor.new("Medium stone grey") -- Reset to default color when the player dies
+                part.Transparency = 0 -- Reset transparency
+            end
+        end
+    end)
+end
 
 local function toggleESP()
     espEnabled = not espEnabled -- Toggle ESP state
@@ -192,45 +211,18 @@ local function toggleESP()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= Players.LocalPlayer then -- Exclude the local player
             if espEnabled then
-                -- Create ESP effect
-                player.CharacterAdded:Connect(function(character)
-                    for _, part in pairs(character:GetChildren()) do
-                        if part:IsA("MeshPart") or part:IsA("Part") then
-                            part.BrickColor = BrickColor.White() -- Change color to white for visibility
-                            part.Transparency = 0.5 -- Make parts semi-transparent (visible through walls)
-                        end
-                    end
-                    
-                    -- Update existing body parts if character already exists
-                    if character:IsDescendantOf(workspace) then
-                        for _, part in pairs(character:GetChildren()) do
-                            if part:IsA("MeshPart") or part:IsA("Part") then
-                                part.BrickColor = BrickColor.White()
-                                part.Transparency = 0.5
-                            end
-                        end
-                    end
-                    
-                    character:WaitForChild("Humanoid").Died:Connect(function()
-                        for _, part in pairs(character:GetChildren()) do
-                            if part:IsA("MeshPart") or part:IsA("Part") then
-                                part.BrickColor = BrickColor.White() -- Reset to default color when the player dies
-                                part.Transparency = 0 -- Reset transparency
-                            end
-                        end
-                    end)
-                end)
-                -- Trigger for already existing characters
+                -- Apply ESP to already existing characters
                 if player.Character then
-                    for _, part in pairs(player.Character:GetChildren()) do
-                        if part:IsA("MeshPart") or part:IsA("Part") then
-                            part.BrickColor = BrickColor.White()
-                            part.Transparency = 0.5
-                        end
-                    end
+                    applyESPToCharacter(player.Character)
                 end
+
+                -- Create ESP effect for newly added characters
+                player.CharacterAdded:Connect(function(character)
+                    applyESPToCharacter(character)
+                end)
+
             else
-                -- Disable ESP Effect by resetting color and transparency
+                -- Disable ESP Effect by resetting color and transparency for existing character
                 if player.Character then
                     for _, part in pairs(player.Character:GetChildren()) do
                         if part:IsA("MeshPart") or part:IsA("Part") then
@@ -250,38 +242,28 @@ Cmdbar.FocusLost:Connect(function(enterPressed)
         print("Executing command:", Cmdbar.Text)
         if Cmdbar.Text:lower() == "esp" then -- Check for `esp` command
             toggleESP() -- Call the toggle function
+        elseif Cmdbar.Text:lower() == "unesp" then -- Check for `unesp` command
+            if espEnabled then
+                toggleESP() -- Call the toggle function to turn off ESP
+            end
         end
         Cmdbar.Text = ""
     end
 end)
 
--- Listen for player added/removed to manage ESP for new players (optional)
+-- Listen for player added to manage ESP for new players
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function(character)
         if espEnabled then
             -- Add ESP to this player when they join while ESP is enabled
-            for _, part in pairs(character:GetChildren()) do
-                if part:IsA("MeshPart") or part:IsA("Part") then
-                    part.BrickColor = BrickColor.White()
-                    part.Transparency = 0.5
-                end
-            end
-            
-            character:WaitForChild("Humanoid").Died:Connect(function()
-                for _, part in pairs(character:GetChildren()) do
-                    if part:IsA("MeshPart") or part:IsA("Part") then
-                        part.BrickColor = BrickColor.new("Medium stone grey") -- Reset to default color when the player dies
-                        part.Transparency = 0 -- Reset transparency
-                    end
-                end
-            end)
+            applyESPToCharacter(character)
         end
     end)
 end)
 
+-- Optional cleanup when player leaves (not necessary if done in toggleESP)
 Players.PlayerRemoving:Connect(function(player)
     if espEnabled then
-        -- Reset ESP for players leaving (optional cleanup)
         if player.Character then
             for _, part in pairs(player.Character:GetChildren()) do
                 if part:IsA("MeshPart") or part:IsA("Part") then
