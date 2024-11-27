@@ -35,18 +35,16 @@ if get_hidden_gui or gethui then
     Main.Name = randomString()
     Main.Parent = hiddenUI()
     PARENT = Main
-elseif (not is_sirhurt_closure) and (syn and syn.protect_gui) then
+elseif syn and syn.protect_gui then
     local Main = Instance.new("ScreenGui")
     Main.Name = randomString()
     syn.protect_gui(Main)
     Main.Parent = COREGUI
     PARENT = Main
-elseif COREGUI:FindFirstChild('RobloxGui') then
-    PARENT = COREGUI.RobloxGui
 else
     local Main = Instance.new("ScreenGui")
     Main.Name = randomString()
-    Main.Parent = COREGUI
+    Main.Parent = COREGUI -- Fallback
     PARENT = Main
 end
 
